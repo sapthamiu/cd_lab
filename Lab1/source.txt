@@ -1,0 +1,8 @@
+The w+ mode is designed for scenarios where you want to create a new file or completely replace 
+the contents of an existing one. 
+    If the file exists: Its entire content is immediately truncated (deleted), and the file pointer is 
+positioned at the beginning.
+    If the file does not exist: A new, empty file is created.
+    Pointer Position: The file pointer starts at the beginning of the file.
+    Use Case: Ideal for writing new data from scratch and then potentially reading that data back 
+within the same session.
