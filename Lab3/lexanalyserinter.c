@@ -28,6 +28,12 @@ TOKEN readString(){
     while((c = fgetc(fp)) != EOF){
         col++;
         buf[i++] = c;
+        if(c == '\\'){ //handle escaped characters
+            char esc = fgetc(fp);
+            col++;
+            buf[i++] = esc;
+            continue;
+        }
         if(c == '"') break;
         if(c == '\n'){
             row++;
@@ -111,7 +117,20 @@ TOKEN readOp(){
     col++;
     buf[i++] = c;
     char next = getc(fp);
-    if((c=='=' && next=='=') || (c=='<' && next=='=') || (c=='>' && next=='=') || (c=='!' && next=='=') || (c=='&' && next=='&') || (c=='|' && next=='|')){
+    if((c=='=' && next=='=') || 
+        (c=='<' && next=='=') || 
+        (c=='>' && next=='=') || 
+        (c=='!' && next=='=') || 
+        (c=='&' && next=='&') || 
+        (c=='|' && next=='|') ||
+        (c=='+' && next=='+') ||
+        (c=='-' && next=='-') ||
+        (c=='+' && next=='=') ||
+        (c=='-' && next=='=') ||
+        (c=='*' && next=='=') ||
+        (c=='/' && next=='=') ||
+        (c=='<' && next=='<') ||
+        (c=='>' && next=='>')){
         col++;
         buf[i++] = next;
     }
@@ -127,46 +146,62 @@ TOKEN readOp(){
 }
 TOKEN readSymbol(){
     TOKEN token;
-    char c = getc(fp);
-    col++;
     token.row = row;
     token.col = col;
+    char c = getc(fp);
+    col++;
     token.type[0] = c;
     token.type[1] = '\0';
     return token;
 }
 TOKEN getNextToken(){
     TOKEN token;
-    char c;
-    c = getc(fp);
-    if(c=='\n'){
-        row++;
-        col = 0;
-        return getNextToken();
-    }
-    if(c == ' ' && c == '\t'){
+    int c;
+    while(1){
+        c = getc(fp);
+        if(c == EOF){
+            strcpy(token.type, "EOF");
+            return token;
+        }
+        if(c=='\n'){
+            row++;
+            col = 0;
+            continue;
+        }
+        if(c == ' ' || c == '\t'){
+            col++;
+            continue;
+        }
+        fseek(fp, -1, SEEK_CUR);
+        if(c == '"') 
+            return readString();
+        if(isalpha(c) || c == '_') 
+            return readId();
+        if(isdigit(c)) 
+            return readNum();
+        if(c=='+' || c=='-' || c=='*' || c=='/' || c=='<' || 
+            c=='>' || c=='=' || c=='!' || c=='&' || c=='|' || c=='%') 
+            return readOp();
+        if(c==';' || c==',' || c=='(' || c==')' ||
+            c=='{' || c=='}' || c=='[' || c==']') 
+            return readSymbol();
+        getc(fp);
         col++;
-        return getNextToken();
     }
-    if(c == EOF){
-        strcpy(token.type, "EOF");
-        return token;
-    }
-    fseek(fp, -1, SEEK_CUR);
-    if(c == '"') return readString();
-    if(isalpha(c) || c == '_') return readId();
-    if(isdigit(c)) return readNum();
-    if(c=='+' || c=='-' || c=='*' || c=='/' || c=='<' 
-    || c=='>' || c=='=' || c=='!' || c=='&' || c=='|') return readOp();
-    if(c==';' || c==',' || c=='(' || c==')' 
-    || c=='{' || c=='}' || c=='[' || c==']') return readSymbol();
-    getc(fp);
-    col++;
-    return getNextToken();
 }
 void preprocess(FILE* src, FILE* dest){
-    char c, next;
+    int c, next;
+    int instring = 0;
     while((c=getc(src)) != EOF){
+        if(c == '"'){
+            instring = !instring;
+            putc(c, dest);
+            continue;
+        }
+        if(instring){
+            putc(c, dest);
+            continue;
+        }
         //preprocessor directive
         if(c == '#'){
             while( c != '\n' && c != EOF)
@@ -184,18 +219,17 @@ void preprocess(FILE* src, FILE* dest){
                 continue;
             }
             else if(next == '*'){
-                while(1){
-                    c = getc(src);
+                while((c=getc(src)) != EOF){
                     if(c == '*'){
-                        char end = getc(src);
-                        if(end == '/') break;
+                        if(getc(src) == '/') break;
                     }
                 }
                 continue;
             }
             else{
                 putc(c, dest);
-                putc(next, dest);
+                if(next != EOF)
+                    putc(next, dest);
                 continue;
             }
         }

@@ -4,7 +4,6 @@ int main() {
 
     int a = 10;
     float b = 3.5;
-    char c = 'x';   
 
     
     printf("Value of a is %d\n", a);
