@@ -1,3 +1,4 @@
+//symbol table using open hash
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
